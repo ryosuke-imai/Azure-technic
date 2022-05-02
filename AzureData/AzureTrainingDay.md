@@ -1,0 +1,50 @@
+# 非構造データの格納サービス
+
+## 種類
+
+- Azure Table Storage
+  - Key Value で管理
+  - パーティションキーとローキーで管理
+- Azure Blob Storage
+  - ３つのカテゴリ
+    - ブロックBlob
+      - Max 4,7 Tb,変化が少なく大きなデータを利用する際に利用
+    - ページBlob
+      - Max 8 Tb, 書き込みや読み取りがあるものに使われる（仮想マシンのディスクによく使われる）
+    - 追加Blob
+      - Max 195 GB , logの保存先、削除や更新はでいない
+  - アクセス層（アクセスレベル）
+    - Hot, Cool, Archive
+    - アーカイブは rehydrate する必要がある（coolへ）
+  - パフォーマンスとスケーラビリティ
+- Azure File Storage
+  - プロトコル
+    - SMB
+    - REST
+  - クラウドネイティブ
+  - フォルダ階層
+- Azure Cosmos DB
+    - コスモスDBアカウントが必要
+    - NoSQL 
+    - スケールアウト前提の設計（スケーラビリティー）、自動的、レプリケーションが簡単
+    - プログラミングモデル採用
+      - SQL API, MongoDB API, Casandra API(columnar storage data), Gremlin API(Gremlin), Table API
+    - マルチマスター：世界上のリージョンで更新可能
+    - SLA : 保存、スピード、スループット、すべてに対応
+  - ポータルでのプロビジョニングの流れ
+    - CosmosDBアカウントの作成
+    - Database の作成
+    - container の作成
+    - item の作成
+  - CosmosDB移行ツール
+    - 対応
+      - Jsonファイル
+      - MongoDB
+      - SQL Server
+      - CSVファイル
+      - Azure Table Storage
+      - Amazon DynamoDB
+      - Hbase
+      - Azure Cosmos コンテナ
+    - ツール名 Azure Cosmos DB Data Migration Tool
+      - Windowsのみ対応
