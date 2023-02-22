@@ -181,6 +181,56 @@ curl [url]
 - [入れ子のTraffic Manager プロファイル](https://learn.microsoft.com/ja-jp/azure/traffic-manager/traffic-manager-nested-profiles)
 
 
+## SQLデータベースを使ってみる
+
+[参考GIT](https://github.com/m-oka-system/udemy-azure-paas/blob/master/doc/Chapter5.SQL%E3%83%87%E3%83%BC%E3%82%BF%E3%83%99%E3%83%BC%E3%82%B9%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%88%E3%81%86.md)
+
+
+### SQLデータベースとは
+
+SQLServerをベースとしたデータベースサービス（PaaSサービス）
+
+- Geoレプリケーション
+  - セカンダリリージョンへの同期
+- 自動フェールオーバー
+  - リージョン規模の障害時に自動的にフェールオーバー
+- ファイアーウォール機能
+  - 特定の接続元以外の接続を拒否
+- 自動バックアップ、暗号化、監視、脅威検出・・・etc
+
+### データベースの構成
+
+２つのリソースで構成される
+
+- SQLデータベース（DB＝課金対象）
+  - SQLServer上でCREATE DATABASE コマンドを実行するようなモノ
+  - データベース環境を提供。パフォーマンスレベルにより性能と価格が決まる
+- SQLServer（論理サーバ）
+  - 仮想マシン上のOSにSQLServerをインストールするようなモノ
+  - サーバ名、ファイアウォール機能、管理者アカウントを定義
+  - 論理サーバ自体は無料で利用できる
+
+![SQLデータベースの構成](images/018.png)
+
+[Azure SQL Database の価格](https://azure.microsoft.com/ja-jp/pricing/details/azure-sql-database/single/)
+
+購入モデル：DTU（データベーストランザクションユニット）
+  CPU、メモリ、データの読み書きを示した指標。パフォーマンスを示したもの。
+リージョン：東日本
+単位：月
+
+### まとめ
+
+- SQL データベースはSQLServerをPaaSとして提供しているもの
+- 論理サーバのSQLServerを作成してその中にSQLデータベースを作成する
+- SQLデータベースのパフォーマンスレベルによってDTU、ストレージ、価格が決定する
+
+### SQLデータベースの作成手順
+
+
+
+
+
 
 
 
