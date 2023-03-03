@@ -358,3 +358,337 @@ tar 解凍
 tar zxvf <圧縮ファイル> -C <解凍先ディレクトリ>
 
 ```
+
+## データベース作成
+
+### Azure Database for MySQL
+
+- 種類
+  - PaaS 型マネージド MySQL
+  - 単一サーバ
+  - フレキシブルサーバ
+    - 運用ではこちらがおすすめ
+- 配置場所
+  - パブリックに配置される
+  - 対処方法
+    - 以下いずれかのアクセス制限をかける
+      - ファイアウォールでアクセス制限（デフォルト）
+      - 閉域アクセスを有効化する（VNet 統合を利用する）
+
+#### 閉域アクセス
+
+![閉域アクセスの整理](img/028.png)
+
+- VNet 統合とは
+  - 特定のサブネットからのみアクセス可能にすること
+
+#### MySQL の可用性の種類
+
+![可用性](img/029.png)
+
+#### Azure Database for MySQL サーバの構築
+
+- Azure Database for MySQL を作成
+  - フレキシブルを選択
+  - VNet統合を選択し、サブネットを指定する
+
+- Application サーバにMySQL Client をインストール
+
+1. Oracle アカウント作成
+2. [MySQL Community のページ](https://dev.mysql.com/downloads/)から RPM の URL を取得
+   1. Red Hat Enterprise Linux 7 / Oracle Linux 7 (Architecture Independent), RPM Package を選択  
+   [ダウンロードリンク](https://dev.mysql.com/get/mysql80-community-release-el7-7.noarch.rpm)
+
+3. MySQL のダウンロード
+
+```bash
+yum localinstall -y <RPM_URL>
+```
+
+4. MySQL Client のインストール
+
+```bash
+yum install -y mysql-community-client
+```
+
+#### APサーバから DB へ接続
+
+MySQL 接続コマンド
+
+```bash
+mysql -u<USER> -p<PASSWORD> -h<HOST> -P<PORT>
+# 注意：パラメタはスペースを開けない
+```
+
+- USER : ユーザ名
+- PASSWORD : パスワード
+- HOST : ホスト名またはIPアドレス
+- PORT : ポート番号（デフォルト 3306）
+
+接続したらデータベース確認
+
+```mysql
+show databases;
+```
+
+その他コマンド例
+
+```mysql
+use <database_name_>;
+show tables;
+```
+
+#### DB バックアップ
+
+Azure Database for MySQL のバックアップはデータファイルのスナップショット
+
+![スナップショットのイメージ](img/030.png)
+
+- スナップショットはローカル冗長ストレージに保存
+- "自動"で取得され、"手動"取得はできない
+- スナップショットはDB削除時に消える
+- バックアップは 1日 ～ 35日で選択可能（デフォルト7日）
+- スナップショットは１日１回作成
+  - トランザクションログバックアップが5分ごとに作成
+
+- 確認方法
+  - バックアップと復元 メニューで確認する
+
+#### DB リストア
+
+スナップショットを元に新しくサーバを起動する
+
+![リストア手順](img/031.png)
+
+1. 自動スナップショットの確認
+2. DB接続してデータ改変
+
+```mysql
+UPDATE t_review SET score=1 WHERE id=1;
+```
+
+3. Azureポータルからリカバリを実施
+   1. 「復元」から実行
+4. リカバリしたDBへアクセスしてデータが戻っていることを確認
+5. 復元したデータベースを削除
+
+## 秘匿情報の管理（キーコンテナ）
+
+### キーコンテナ（Key Vault）
+
+Azure で扱う以下のような秘匿情報を管理するサービス
+
+- キー
+  - データの暗号化に使用する暗号化キー、VM のストレージ暗号化
+- シークレット
+  - DB サーバへの接続文字列
+- 証明書
+  - TLS/SSL の設定で利用する証明書など
+
+使い方イメージ
+![キーコンテナ1](img/032.png)
+![キーコンテナ2](img/033.png)
+
+#### キーコンテナの作成
+
+1. キーコンテナを作成
+
+```bash
+<Projest>-<Env>-kv
+```
+
+2. DB接続情報を確認してキーコンテナに登録
+
+```bash
+MYSQL-HOST <ホスト名>
+MYSQL-PORT  <3306>
+MYSQL-DATABASE  <データベース名> ex.tastylog
+MYSQL-USERNAME  <ユーザ名>
+MYSQL-PASSWORD  <パスワード>
+
+```
+
+#### マネージドIDの作成とVMへの付与
+
+1. マネージドID の作成
+
+- マネージド ID サービスを作成
+
+1. VM への付与
+
+- VM メニューの [ID] を選択
+- ユーザ割り当て済みに付与
+
+#### キーコンテナへのアクセス制御設定
+
+- シークレットに対して以下を付与
+  - 取得
+  - 一覧
+
+1. キーコンテナにアクセスポリシーを設定
+
+- キーコンテナへアクセス
+- 「アクセスポリシー」を選択
+- 「シークレット」から「取得」「一覧」を選択
+- プリンシパルに、先ほどのマネージドIDを選択する
+
+#### キーコンテナからシークレットを取得
+
+概要
+
+- az login
+- az keyvault secret list
+- az keyvault secret show
+
+■ マネージドID によるログイン
+
+```bash
+az login --identity --allow-no-subscription
+```
+
+引数
+  -- identity 仮想マシンに設定されたIDを使用してログイン
+  -- allow-no-subscription  サブスクリプション指定なしでログイン
+
+■ Keyvalt から情報を取得
+
+```bash
+# 一覧取得
+az keyvault secret list --vault-name <KEYVAULT_NAME>
+# 情報を取得
+az keyvault secret show --vault-name <KEYVAULT_NAME> --name <SECRET_NAME>
+```
+
+引数
+  --vault-name <KEYVAULT_NAME>  キーコンテナ（Key Vault）名を指定
+  -- name <SECRET_NAME> シークレット名を指定
+  -- output table <OPTION テーブル形式で出力>
+
+### APサーバの再設定
+
+■ 実施概要
+1. キーコンテナに登録したDB接続情報を確認
+2. VMのタグを追加
+   1. 目的は、環境変数取得シェルから（load-params）でタグから情報を取得しているため  
+      "\${Project}-${Env}-kv" という名前でキーコンテナへアクセスしているため
+3. サービス（load-params、tastylog）を再起動
+   1. 環境変数の取得（=load-params 再起動）  
+
+      ```bash
+      sudo systemctl start load-params
+      ```
+
+      取得した環境変数情報は以下に配置される（内容が読み込まれていることを確認）  
+        /etc/params
+   2. アプリで環境変数読み直し（=tastylog再起動）
+
+      ```bash
+      sudo systemctl restart tastylog
+      ```
+
+4. 動作確認
+
+### 負荷分散
+
+Azure が提供する負荷分散
+
+![Azureが提供する負荷分散](img/034.png)
+
+- Load Balancer
+  - L4ベース、プライベートがよく使われる
+- Application Gateway
+  - L7相当 SSl/TLS 終端もできる
+- Traffic Manager
+  - DNS ベースのグローバルな負荷分散
+- Front Door
+  - CDNを含むグローバルな負荷分散、WAFも追加できる
+
+#### 実例イメージ
+
+■ load Balancer（Private） の場合
+
+![load Balancer（Private）](img/035.png)
+
+■ Application Gateway
+
+一般公開アプリの場合
+
+![Application Gateway](img/036.png)
+
+■ Traffic Manager
+
+リージョンレベルの災害対策
+
+![Traffic Manager](img/037.png)
+
+■ Front Door
+
+リージョンレベルの災害対策+高速化
+
+![Traffic Manager](img/038.png)
+
+### Application Gateway の作成
+
+#### 外部公開するため
+
+1. Application Gateway の作成  
+
+  ■ 設定項目  
+
+- 配置用サブネット  : WEB用サブネット  
+- フロントエンド    : パブリックIPを新規取得  
+- バックエンド      : 作成済みVM  
+- ルーティング規則  : HTTP(TCP80) を受けて TCP3000 へ転送
+
+![設定イメージ](img/040.png)
+
+2. リソースの作成
+
+- アプリケーションGWの作成
+  - アプリケーションGWリソースを作成
+  - フロントエンドのパブリックIP作成
+  - バックエンドの指定（VM）
+  - ルーティング規則の追加
+    - リスナー
+    - バックエンド
+
+### AzureCLI ツールのインストール
+
+仮想マシンからキーコンテナへのアクセスをするためのツール
+
+Azureを操作するする方法
+
+- Azure ポータル
+- CLIツール　（Azure PowerShell、Azure CLI）
+- 各種SDK
+
+
+#### Azure CLI ツールのインストール方法 (Linux CentOS)
+
+1. Microsoftのリポジトリキーをインポート
+
+``` bash
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+```
+
+2. ローカルリポジトリ情報を作成
+
+```bash
+echo -e "[azure-cli]
+name=Azure CLI
+baseurl=https://packages.microsoft.com/yumrepos/azure-cli
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc" \
+| sudo tee /etc/yum.repos.d/azure-cli.repo
+
+```
+
+3. インストール
+
+```bash
+sudo dnf install azure-cli
+```
+
+[Linux に Azure CLI をインストールする](https://learn.microsoft.com/ja-jp/cli/azure/install-azure-cli-linux?pivots=dnf)
+
