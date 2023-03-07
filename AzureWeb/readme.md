@@ -652,7 +652,396 @@ Azure が提供する負荷分散
     - リスナー
     - バックエンド
 
-### AzureCLI ツールのインストール
+### 独自ドメイン/証明書
+
+#### ■ DNS ゾーン
+
+- ドメイン名（www.example.com） をパブリックIPアドレス（例:31.2.11.13）に変換するサービス。
+- ドメイン名を使って Azure サービスへ接続できるようにする。
+
+プライベートDNSゾーン（というサービスもある）
+
+変換するIPアドレスがプライベートであること
+
+イメージ
+
+![DNSイメージ](img/041.png)
+
+※DNSゾーンにはIPアドレスだけでなくエイリアスの指定もできる
+
+DNS 概要イメージ
+
+![DNSイメージ](img/042.png)
+
+- NS レコード
+  - ドメイン情報を保持しているDNSサーバ名の定義
+- A レコード
+  - ドメインをIPアドレスに変換する定義
+- CNAME レコード
+  - ドメインを別ドメインに置き換える定義
+
+#### ■ ドメイン取得
+
+[お名前ドットコム](https://www.onamae.com/)で取得
+
+.work は 1 円
+
+ドメイン名 : ryosukelly.com
+
+で登録
+
+#### ■ DNSゾーンの設定
+
+1. DNS ゾーン作成
+2. ドメイン取得元（お名前.com）に対する設定
+   1. NS レコードの向き先を Azure のDNSゾーンへ向ける
+3. DNSゾーンに「Aレコード（ドメイン → IP アドレスへの変換）」作成
+   1. AzpplicationGateway へドメイン名でアクセスできるようにする
+   2. 作成には「エイリアス（＝リソース名）」を利用する
+4. 動作確認
+   1. ドメイン名で ApplicationGateway にアクセス
+   2. アクセスする際は HTTP でアクセスする
+
+### 証明書
+
+#### ■ HTTPS
+
+HTTPを暗号化して安全に通信するための仕組み
+
+できること
+
+![HTTPSでできること](./img/043.png)
+
+- 盗聴防止
+- なりすまし防止
+- 改ざん防止
+
+SSL/TLSといったプロトコルを使って暗号化  
+
+- いまはTLSが主流
+- 通信のはじめに事前準備が必要
+- 第3者機関（認証局CA）が発行
+- 公開鍵の基盤をPKIという
+- 発行された証明書が鍵
+
+#### ■ Let's Encript
+
+![Let's Encript](./img/044.png)
+
+- 無料で使用可能
+- 制限は以下
+  - 発行された証明書は 90日で失効
+  - 使い続けるためには定期的に自動更新する仕組みが必要
+  - 公式の GUI はなく CLI での対応が基本
+
+#### 証明書作成のながれ
+
+1. 必要ツールのインストール
+   - certbot
+   - openssl
+2. 証明書の発行
+
+```bash
+certbot certonly
+```
+
+3. 証明書形式の変換（pem → pfx）→キーコンテナ（Key Vault）へ登録するため
+
+```bash
+openssl pkcs12
+```
+
+#### Let's Encript
+
+■ certbot のインストール
+
+```bash
+yum install -y epel-release
+yum install -y certbot
+```
+
+■ OpenSSL のインストール
+
+```bash
+yum install -y openssl
+```
+
+```bash
+# 演習用スクリプト
+#!/bin/bash
+# -------------------------------------------------------------------
+# Install middleware
+# -------------------------------------------------------------------
+
+# Install certbot
+# ---------------------------------
+# # install snap
+yum install -y epel-release
+# yum install -y snapd
+# systemctl enable --now snapd.socket
+# rm -rf /snap/snap
+# ln -s /var/lib/snapd/snap /snap
+
+# # update snap
+# snap install core
+# snap refresh core
+
+# # install certbot
+# snap install --classic certbot
+# ln -s /snap/bin/certbot /usr/bin/certbot
+
+# # install certbot plugin
+# snap set certbot trust-plugin-with-root=ok
+yum install -y certbot
+
+# Install OpenSSL
+# ---------------------------------
+yum install -y openssl
+```
+
+バージョン確認
+
+```bash
+certbot --version
+openssl version
+
+```
+
+■ LEts Encript で証明書の発行
+
+- 証明書の発行
+
+```bash
+certbot certonly
+ [-- manual][--preferred-challenges [dns|http]]
+ [--force-renewal][--domains <DOMAIN_NAME>]
+ [--email <YOUR_EMAIL>]
+
+ # 引数
+ # --manually               対話形式またはスクリプトで証明書を取得
+ # --preferred-challenges   認証で利用する検証方法[dns|http]
+ # --domains <DOMAIN_NAME>  ドメイン名
+ # --email <YOUR_EMAIL>     登録に利用すメールアドレス
+```
+
+```bash
+certbot certonly --manual --preferred-challenges dns --force-renewal --domains *.ryosukelly.com --email ryosukelly.slater@gmail.com
+```
+
+■ DNS チャレンジのながれ
+
+![DNSチャレンジ](./img/045.png)
+
+![証明書の出力先](./img/046.png)
+
+ローテートされてもファイルパス変更しなくてよいようリンクを使う
+
+#### ■ KetVault で利用できるように pfx 形式へ変換する
+
+pem 形式からpfx形式へ変換する
+
+```bash
+openssl pkcs12 -export -inkey <PRIVATE> -in <CERT> -out <OUTPUT>
+# 引数
+# -export           PKCS#12 形式のファイル出力
+# -inkey <PRIVATE>  秘密鍵を指定
+# -in <CERT>        証明書を指定
+# -out <OUTPUT>     出力するファイル名を指定
+```
+
+#### ■ 発行の手順
+
+1. 発行
+
+
+コマンド
+
+```bash
+certbot certonly --manual --preferred-challenges dns --force-renewal --domains *.ryosukelly.com --email ryosukelly.slater@gmail.com
+```
+
+```bash
+# 以下のようなものが発行され、　DNS TXT を Azure DNS ゾーンに登録
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Please deploy a DNS TXT record under the name
+_acme-challenge.ryosukelly.com with the following value:
+
+RCNz7bY6nXtWJbjPREHbVx9o1B5sXcpc7xtTC0E-fvk
+
+Before continuing, verify the record is deployed.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+```
+
+- Azure DNSゾーンにレコードセットを追加
+  - ドメイン名は指定のもの：_acme-challenge.ryosukelly.com
+  - 種類はテキストレコード：TXT record
+- 別ターミナルからレコードが反映されているか確認する
+
+```bash
+nslookup -type=TXT _acme-challenge.ryosukelly.com.ryosukelly.com 8.8.8.8
+```
+
+
+```bash
+sudo su
+pwd
+/etc/letsencrypt/live/ryosukelly.com
+ll
+
+lrwxrwxrwx. 1 root root  38 Mar  6 09:10 cert.pem -> ../../archive/ryosukelly.com/cert1.pem
+lrwxrwxrwx. 1 root root  39 Mar  6 09:10 chain.pem -> ../../archive/ryosukelly.com/chain1.pem
+lrwxrwxrwx. 1 root root  43 Mar  6 09:10 fullchain.pem -> ../../archive/ryosukelly.com/fullchain1.pem
+lrwxrwxrwx. 1 root root  41 Mar  6 09:10 privkey.pem -> ../../archive/ryosukelly.com/privkey1.pem
+
+# fullchain 証明書
+# privkey   秘密鍵
+```
+
+#### 変換
+
+```bash
+openssl pkcs12 -export -inkey privkey.pem -in fullchain.pem -out windows.pfx
+
+mv ./windows.pfx /home/azureuser
+```
+
+#### ローカルへダウンロード
+
+```bash
+scp -i .\vm-business_key.pem azureuser@20.222.227.83:\home\azureuser\windows.pfx ./
+```
+
+### SSL/TLS ターミネーション
+
+SSL/TLS 通信を複合して生の電文にもどすこと
+
+![ターミネーション](./img/047.png)
+
+#### Key Vault へ証明書を登録
+
+■ KeyVaultへの登録
+
+- 証明書に登録する
+  - 作成方法：インポート
+  - 名前：任意
+  - 証明書：ファイルをアップロード
+  - パスワード：作成時のパスワード
+
+#### Application GW に証明書設定
+
+1. 「リスナー」から「HTTPSリスナー」を追加
+2. 「ルール」から「ルーティング規則」を追加
+3. 動作確認
+
+### コンテンツ配信（キャッシュサーバ）
+
+#### ■ ストレージアカウント (Storage Account)
+
+データオブジェクトサービス
+
+- コンテナ（Blob Storage）
+- ファイル共有
+  - SMB、NFSで接続可能
+- キュー
+  - 多数のメッセージを格納する（順序保障が必要なら Service Bus）
+- テーブル
+  - 性能やクエリの柔軟性が必要なら CosmosDB を使う
+
+#### ■ Blob Storage でできること
+
+- データ保管
+  - コンテナにディレクトリ形式でデータ保管ができる
+- データの取り出し
+  - 複数のVMからアクセス可能
+  - 外部へ静的コンテンツとして配信可能
+
+#### 使用例
+
+![使用例](./img/048.png)
+
+#### アクセス制御の構造
+
+![ネットワーク制限の種類](./img/049.png)
+
+- ネットワークアクセス制御
+  - アクセス可能か
+- 認証認可
+  - アカウントレベルのアクセス制御（ストレージアカウントレベルか、コンテナレベルか）
+- ネットワーク経路の制限
+
+![ネットワーク経路](./img/050.png)
+
+![認証認可](./img/051.png)
+
+- アクセスキー
+  - ヘッダや署名などに強い制限をかける
+- 共有アクセストークン
+  - 一時的な解放
+- AzureAD
+  - AzureADユーザ、グループ、マネージドIDに対してロールを付与
+
+![冗長性](./img/052.png)
+
+### キャッシュサーバ（CDN）
+
+#### ■ FrontDoor
+
+Azure の CDN サービス
+
+■ 目的
+
+- サービス提供しているサーバ負荷軽減
+- ユーザんび対する応答速度向上
+  - ユーザのアクセス元から近いサーバにアクセスさせる様にできる
+
+対象
+
+- ユーザごとに変化しない CSS,JS, 
+
+■ 用語
+
+- 静的コンテンツ
+  - ユーザによって変化しないコンテンツ
+- 動的コンテンツ
+
+- エッジサーバ（キャッシュサーバ）
+  - CDN
+- オリジンサーバ
+  - すべてのコンテンツを保持しているサーバ
+
+#### ■ Front Door の設定
+
+- ルーティング規則
+
+最長マッチ（一致率が高いものが優先）
+
+![ルーティング規則](./img/053.png)
+
+- "*" (ワイルドカード)のないルールは完全一致
+- できるだけ固定文字の一致率が高いものが選択される
+
+■ 作成内容
+
+- 証明書  ：設定なし（後から設定）
+- エンドポイント  ：  任意の名称を設定
+- バックエンド  ：　Application Gateway のドメイン、配信元の種類”カスタムドメイン”
+- ルーティング規則：http、httpsを受け入れ　、/* をバックエンドに転送、キャッシュ無効
+
+■ Fornt Door の作成
+
+- 「Front Door と CDN プロファイル」リソース名
+  - Azure FrontDoor
+  - カスタム作成
+- 証明書はあとで
+- エンドポイント
+  - FrontDoorのエンドポイント（任意の名前）
+
+---
+
+### その他
+
+#### AzureCLI ツールのインストール
 
 仮想マシンからキーコンテナへのアクセスをするためのツール
 
