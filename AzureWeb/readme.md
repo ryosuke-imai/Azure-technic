@@ -1090,6 +1090,144 @@ FrontDoor
    「プライバシーポリシー」ページを開いてキャッシュされていることを確認  
    ```x-catch:TCP_HIT```
 
+### モニタリング設定
+
+#### ■ Azure Monitor とは
+
+システムモニタリングサービス
+
+以下を一元的に管理。視覚化しアラートを発生させることができる
+
+- メトリック
+  - CPU
+  - メモリ
+- ログ
+  - syslog
+  - イベントログ
+
+![監視できるもの](img/054.png)
+
+![監視方法](img/055.png)
+
+#### ■ ログ収集の設定
+
+1. Log Analytics ワークスペースの作成
+   - [Log Analytics ワークスペース]の作成
+2. 診断設定からアクセスログ収集設定
+   - [Front Door と CDN プロファイル]の **診断設定** を選択
+   - [+診断設定を追加する]から 以下のログを指定して、保管先に **Log Analytics ワークスペースへの送信** を選択する
+     - FrontDoor  AccessLog
+     - ApplicationGateway AccessLog
+
+#### ■ メトリックの確認
+
+メトリックの確認は以下が主
+
+1. APサーバ
+   - CPU、メモリ
+2. DB
+   - コネクション数
+3. WEB
+   - 200応答数
+4. キャッシュ (CDN)
+   - リクエスト数
+
+![監視対象](img/056.png)
+
+■ 1. APサーバ
+
+- Azure Monitor へアクセス
+  - メトリック
+    - **メトリック** を選択し
+    - **範囲の選択** で 作成した仮想マシンを選択し以下を指定
+      - Percentage CPU
+        - 集計
+          - 平均
+      - Available Memory Byte
+        - 集計
+          - 平均
+    - MySQL
+      - Active Connections
+        - 集計
+          - 最大値
+    - Application Gateway
+      - Response Status
+        - フィルター
+          - httpStatus
+            - 分割適用
+            - 棒グラフ
+        - 集計
+          - 合計
+    - FrontDoor
+      - Original Request Count
+        - 集計
+          - 合計
+  - ログ
+    - **ログ** を選択し
+    - **スコープの選択** から作成したLogAnalytics を選択
+      - AzureDiagnostics からデータ取得
+  
+        ``` SQL
+        // データの参照
+        AzureDiagnostics |
+            limit 100
+        ```
+
+        ※```Edge+Health+Probe``` を消して表示
+
+        ``` SQL
+        // データの参照
+        AzureDiagnostics 
+        |   where userAgent_s != "Edge+Health+Probe" and requestUri_s != ""
+        |   limit 100
+        ```
+
+        ※新しい列追加して、グラフに作成
+
+        ```sql
+        AzureDiagnostics
+        | where httpStatus_d != ""
+        | extend statusCode = tostring(httpStatus_d)
+        | summarize count() by statusCode
+        | render piechart 
+        ```
+
+![Kustoクエリサンプル](img/057.png)
+
+#### ■ アラートの確認
+
+アラートの仕組み
+
+![アラートの仕組み](img/058.png)
+
+- アクショングループを作成し
+- アラート設定を行う
+
+### オートスケーリング設定
+
+### アクセス制御設定
+
+#### ■ Azure Active Directory とは
+
+Azure サービスに対するユーザおよび操作権の制御
+
+グループを作成し、ロールを設定。ユーザをグループにアサインする
+
+■ Active Directory の種類
+
+![ADの種類](img/059.png)
+
+#### ■ サービスプリンシパルとマネージドID
+
+![サービスプリンシパル](img/060.png)
+
+![マネージドIDとサービスプリンシパル](img/061.png)
+
+#### ■ 組み込みロール
+
+![ロールの種類](img/062.png)
+
+![組み込みロールの基本](img/063.png)
 
 ---
 
@@ -1104,7 +1242,6 @@ Azureを操作するする方法
 - Azure ポータル
 - CLIツール　（Azure PowerShell、Azure CLI）
 - 各種SDK
-
 
 #### Azure CLI ツールのインストール方法 (Linux CentOS)
 
@@ -1134,4 +1271,3 @@ sudo dnf install azure-cli
 ```
 
 [Linux に Azure CLI をインストールする](https://learn.microsoft.com/ja-jp/cli/azure/install-azure-cli-linux?pivots=dnf)
-
