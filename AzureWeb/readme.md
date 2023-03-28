@@ -1205,7 +1205,278 @@ FrontDoor
 
 ### オートスケーリング設定
 
-### アクセス制御設定
+#### ■ 独自イメージ化
+
+■ OSイメージの作成
+
+- マーケットプレイス
+- イメージギャラリー(自分のアプリ)
+
+- イメージ化の範囲
+  - OSの選択/起動
+  - OS/ミドルの設定
+
+イメージ名の定義
+
+![イメージ定義](img/064.png)
+
+#### ■ イメージの作成
+
+![イメージ定義](img/065.png)
+
+- VMの **キャプチャー** から作成
+  - ギャラリーへイメージバージョンとして作成
+  - ギャラリーの詳細
+    - ギャラリーの名前設定
+    - ターゲットVMイメージ定義の作成
+
+#### ■ ビルドリリース
+
+![リリース方法](img/066.png)
+
+![プッシュとプル](img/067.png)
+
+- プッシュ式：Ansible
+- プル：Github、Blob
+
+#### ■ Blobへの設定
+
+![Blogからのダウンロードコマンド](img/068.png)
+
+```bash
+az storage blob download \
+　--auth-mode login \
+　--account-name [ストレージアカウント名] \
+　--container-name [コンテナ名] \
+　--name [ファイル名] \
+　--file [対象ファイル名]
+```
+
+事前に、azloginが必要
+
+- Blobへの設定
+  - パブリックアクセス（一時的に）へ変更
+  - マネージドIDから閲覧できるようにする
+
+#### アクセス制御設定
+
+Blob の アクセス制御（IAM）で対象のマネージドIDに **ストレージ BLOB データ閲覧者** ロール権限を与える。
+
+#### VMスケールセットの設定
+
+オートスケール設定を行う
+
+- 資材取得
+- 資材展開
+- サービス起動
+
+- VM スケールセットの作成
+  - ギャラリーに移動
+  - 対象のイメージの **バージョン** タブを選択
+  - **+ VMSS の作成** を選択
+    - イメージは自動でセットされる
+    - 同一サブネットを設定
+    - ネットワーク インターフェイスの編集
+      - NSGをなし
+      - パブリックON
+    - 負荷分散
+      - 作成したApplicationGatewayを指定
+    - スケールイン ポリシー
+      - 最も古いVMを消す
+    - 監視
+      - 無効化
+    - 詳細
+      - カスタムデータ（スクリプトを記載する）
+        - [cloud-init.sh](./resource/cloud-init.sh) の中身をコピー
+- 作成後の設定
+  - ID ※マネージドIDの設定
+    - ユーザ割り当て済みで **マネージドID** を指定
+  - スケーリング
+    - インスタンス数
+      - 0 → 1
+- 起動の確認
+  - パブリックIP + 3000 でアクセスして確認
+
+#### VMスケールアウトとスケールインの閾値は幅をもたす
+
+![スケールアウトとインの閾値](img/069.png)
+
+- 自動スケーリング設定
+  - 3分間の平均CPU使用率が60% より大きくなると１台スケールアウトさせる
+  - 5分間の平均CPU使用率が40% より小さくなると１台スケールインさせる
+
+#### Jmater を利用した動作確認
+
+![自動スケールの動作確認イメージ](img/070.png)
+
+- [Jmater](https://jmeter.apache.org/download_jmeter.cgi)
+- [Jmaterの使い方](https://test-hack.com/jmeter_1/)
+- [Jmaterの使い方2](https://blackbird-blog.com/jmeter-01)
+
+[UdemyJmater](https://www.udemy.com/course/webapplication-on-azure/learn/lecture/31538952#questions/18426946)
+
+### Azure Bastion
+
+#### ■ Azure Bastion の背景
+
+![Azure Bastionの背景](img/071.png)
+
+![Azure Bastionの背景](img/072.png)
+
+#### ■ AzureCLIのインストール
+
+[Windows での Azure CLI のインストール](https://learn.microsoft.com/ja-jp/cli/azure/install-azure-cli-windows?tabs=azure-cli)
+
+#### ■ Azure Bastion の作成
+
+■ ネットワーク周りの設定
+
+![Azure Bastionの背景](img/073.png)
+
+![Azure Bastionの背景](img/074.png)
+
+1. AP サーバのサブネットに対して不要なポートを閉じる
+   1. **NSG** でアプリケーションサーバ用の受信規則から **22** ポート許可を削除
+        - 下表を設定
+   2. Bastion 用の NSG に受信規則に 4 つ規則を追加、送信規則に 4 つ追加
+   3. ローカルからアクセスしてつながらないことを確認
+2. Bastion 用のNSGを作成/設定
+3. Bastion サービス作成
+
+表1. 受信規則
+
+|ソース|ソースサービスタグ|宛先|サービス:ポート|備考|
+|---|---|---|---|---|
+|ServiceTag|Internet|Any|HTTPS:443|AllowHttpsInbound|
+|ServiceTag|GatewayManager|Any|HTTPS:443|AllowGatewayManagerInbound|
+|ServiceTag|LoadBalancer|Any|HTTPS:443|AllowAzureLoadbalancerInbound|
+|ServiceTag|VirtualNetwork|Any|Custom:8080,5701|AllowBastionHostComunication|
+
+表2. 送信規則
+
+|ソース|宛先|宛先サービスタグ|サービス:ポート|備考|
+|---|---|---|---|---|
+|Any|ServiceTag|VirtualNetwork|Custom:22,3389|AllowSshRdpOutbound|
+|Any|ServiceTag|AzureCloud|https:443|AllowAzureCloudOutbound|
+|VirtualNetwork|ServiceTag|VirtualNetwork|Custom:5701,8080:Any|AllowBastionComunication|
+|Any|ServiceTag|Internet|http:80|AllowSessionInfomationOutbound|
+
+参照 : [NSG アクセスと Azure Bastion を使用する](https://learn.microsoft.com/ja-jp/azure/bastion/bastion-nsg#apply)
+
+■ Azure Bastion の作成
+
+- リソース **Bastion の作成** から作成する
+- レベル : **Standerd** を選択
+- パブリックIP : 新規
+- 詳細設定
+  - ネイティブクライアントサポート
+
+#### ■ Azure Bastion のネイティブログイン（クライアントからBastion経由でアクセスする）
+
+- 前提条件
+  - Bastion
+    - Standard 以上
+    - 「ネイティブクライアントサポート」が有効かされている
+  - Azure CLI
+    - SSH ネイティブログイン拡張機能がインストールされている
+
+※拡張機能のインストール
+
+```bash
+#拡張機能のインストール
+az extension add --name ssh
+# 拡張機能のインストール状況の確認
+az extension list-available --output table
+```
+
+■ 接続手順
+
+1. Azure へのログイン
+
+   ```bash
+   az login --tenant <テナントID>
+   ```
+
+2. 利用する サブスクリプション を指定
+
+  ```bash
+  az account set --subscription <サブスクリプションID>
+  ```
+
+3. 接続
+   - 2 つの方法がある
+   1. SSH接続 (ssh のみ)
+
+    ```bash
+    az network bastion ssh
+    ```
+
+   2. トンネル (別ターミナルで実行 : ssh と scp が使える)
+
+    ```bash
+    az network bastion tunnel
+    ```
+
+#### ■ az network bastion ssh
+
+```bash
+az network bastion ssh
+ --name "<BastionName>"
+ --resource-group "<ResourceGroupName>"
+ --target-resource-id "<VMResourceId>"
+ --auth-type "ssh-key"
+ --username "<Username>"
+ --ssh-key "<Filepath>"
+```
+
+- --name
+  - Bastionホスト名
+- --resource-group
+  - リソースグループ名
+- --target-resorce-id
+  - 必須、SSH接続したいVMのリソースID
+- --auth-type
+  - 必須、認証方法（password, ssh-key, AAD：から選択）
+- --username
+  - SSH接続で利用するユーザ名
+- --ssh-key
+  - SSH接続で利用するSSH鍵のファイルパス
+
+#### ■ az network bastion tunnel
+
+```bash
+az network bastion tunnel
+ --name "<BastionName>"
+ --resource-group "<ResourceGroupName>"
+ --target-resource-id "<VMResourceId>"
+ --resource-port "VM_SEROURCE_PORT"
+ --port "<LOCAL_PORT>"
+```
+
+- --resource-port
+  - 必須、SSH接続したいVMのポート番号 22
+- --port
+  - 必須、トンネルに利用するローカルのポート番号 (任意:822 etc)
+
+```bash
+#例
+az network bastion tunnel
+ --name azurebastion-ryosuke
+ --resource-group rg-udemy-ryosuke-web
+ --target-resource-id /subscriptions/0b63dccf-6de9 ～ s/vm-business --resource-port 22
+ --port 822
+```
+
+イメージ
+![tunnelのイメージ](img/075.png)
+
+```bash
+# SCP
+scp -i .\vm-business_key.pem -P 822 .\sample.txt azureuser@127.0.0.1:/home/azureuser
+# SSH
+ssh -i .\vm-business_key.pem -p 822 azureuser@127.0.0.1
+```
+
 
 #### ■ Azure Active Directory とは
 
