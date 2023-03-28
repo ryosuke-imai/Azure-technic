@@ -3,6 +3,7 @@
 ## 概要
 
 Udemyの講座の整理
+
 - [Azure で作る Webアプリケーション 実践講座](https://www.udemy.com/course/webapplication-on-azure/)
 - Azure上に実業務を想定したWebアプリケーション（Node.js + MySQL）の構築
 
@@ -60,17 +61,17 @@ Azure 上の VM に Node.js アプリを作成することで、Azure上のWeb�
 - 監査ログの確認
   - ログの種類
 
-
 ※1. ログの種類
 
 ![アカウントのログ](img/003.png)
-
 
 ---
 
 ## 作成するアプリケーション（お試し）
 
-### 概要
+まずはなれるためにお試しの構成を作成する
+
+### 作成の目的
 
 - VM 上に NGINX(WEBサーバ) を作成する
 
@@ -104,6 +105,7 @@ ssh azure-user@20.89.107.75
 ![講座に関するサービス](img/006.png)
 
 アーキテクチャアイコンの取得先
+
 - [マイクロソフト公式](https://learn.microsoft.com/ja-jp/azure/architecture/icons/)
 - マイクロソフトUXパターン
 - drow.io
@@ -142,7 +144,6 @@ ssh azure-user@20.89.107.75
       - Bastion通信 : インバウンド HTTP TCP 80, Bastion通信(TCP 8080, 5701)
         - アウトバウンド : SSH TCP22、RDP　TCP 3389、 HTTP TCP80、443、Bastion通信 TCP 8080, 5701
 
-
 ### ネットワークの基礎
 
 ![IPアドレス](./img/011.png)
@@ -177,7 +178,6 @@ ssh azure-user@20.89.107.75
   - VNet
   - インターネット
 
-
 ### ARM テンプレート
 
 ![ARM テンプレート](img/020.png)
@@ -192,7 +192,6 @@ ssh azure-user@20.89.107.75
 
 - VM上に作成
 
-
 認識ポイント
 
 - インスタンスサイズの名称の意味
@@ -202,7 +201,7 @@ ssh azure-user@20.89.107.75
     - s : 補足情報
     - V3 : バージョン
 
-#### VM 補足ポイント
+### VM 補足ポイント
 
 - インスタンスファミリー
 
@@ -224,8 +223,8 @@ ssh azure-user@20.89.107.75
 
 - SSH 接続
   - 引数
-    - -i <KEYFILE>  接続に利用するキーペアの鍵ファイル
-    - -p <PORT>     ポート番号（デフォルト 22）
+    - -i \<KEYFILE>  接続に利用するキーペアの鍵ファイル
+    - -p \<PORT>     ポート番号（デフォルト 22）
     - <USER_NAME>   接続したい VM のユーザ名
     - <PUBLIC_IP>   接続したい VM のパブリックIPアドレス
 
@@ -235,11 +234,11 @@ ssh [-i <KEYFILE>][-p <port>] <USER_NAME>@<PUBLIC_IP>
 
 - SCP 接続（アップロード）
   - 引数
-    - -i <KEYFILE>  接続に利用するキーペアの鍵ファイル
-    - <SOURCE>      転送したいローカルファイル
-    - <USER_NAME>   接続したい VM のユーザ名
-    - <PUBLIC_IP>   接続したい VM のパブリックIPアドレス
-    - <TARGET>      転送先フォルダ
+    - -i \<KEYFILE>  接続に利用するキーペアの鍵ファイル
+    - \<SOURCE>      転送したいローカルファイル
+    - \<USER_NAME>   接続したい VM のユーザ名
+    - \<PUBLIC_IP>   接続したい VM のパブリックIPアドレス
+    - \<TARGET>      転送先フォルダ
 
 ``` bash
 scp -i <KEYFILE> <SOURCE> <USER_NAME>@<PUBLIC_IP>:<TARGET>
@@ -247,11 +246,11 @@ scp -i <KEYFILE> <SOURCE> <USER_NAME>@<PUBLIC_IP>:<TARGET>
 
 - SCP 接続（ダウンロード）
   - 引数
-    - -i <KEYFILE>  接続に利用するキーペアの鍵ファイル
-    - <USER_NAME>   接続したい VM のユーザ名
-    - <PUBLIC_IP>   接続したい VM のパブリックIPアドレス
-    - <TARGET>      ダウンロードしたいファイルパス
-    - <LOCAL>       保存先ローカルパス
+    - -i \<KEYFILE>  接続に利用するキーペアの鍵ファイル
+    - \<USER_NAME>   接続したい VM のユーザ名
+    - \<PUBLIC_IP>   接続したい VM のパブリックIPアドレス
+    - \<TARGET>      ダウンロードしたいファイルパス
+    - \<LOCAL>       保存先ローカルパス
 
 ``` bash
 scp -i <KEYFILE> <USER_NAME>@<PUBLIC_IP>:<TARGET> <LOCAL>
@@ -305,15 +304,15 @@ scp -i <KEYFILE> <USER_NAME>@<PUBLIC_IP>:<TARGET> <LOCAL>
 
 1. ユニットファイルの配置
 
-```bash
-/etc/systemd/system/<UNIT_FILE>
-```
+    ```bash
+    /etc/systemd/system/<UNIT_FILE>
+    ```
 
 2. systemd に対して読込実行
 
-```bash
-systemctl daemon-reload
-```
+    ```bash
+    systemctl daemon-reload
+    ```
 
 - 登録されたかの確認（サービス一覧表示/状態確認）
 
@@ -330,12 +329,12 @@ systemctl status <UNIT_NAME>
 
   - サービス開始/終了
 
-```bash
-# 開始
-systemctl start <UNIT_NAME>
-# 終了
-systemctl stop <UNIT_NAME>
-```
+    ```bash
+    # 開始
+    systemctl start <UNIT_NAME>
+    # 終了
+    systemctl stop <UNIT_NAME>
+    ```
 
   - サービスの自動起動の有効/無効
 
@@ -401,9 +400,9 @@ tar zxvf <圧縮ファイル> -C <解凍先ディレクトリ>
 
 3. MySQL のダウンロード
 
-```bash
-yum localinstall -y <RPM_URL>
-```
+    ```bash
+    yum localinstall -y <RPM_URL>
+    ```
 
 4. MySQL Client のインストール
 
@@ -463,9 +462,9 @@ Azure Database for MySQL のバックアップはデータファイルのスナ�
 1. 自動スナップショットの確認
 2. DB接続してデータ改変
 
-```mysql
-UPDATE t_review SET score=1 WHERE id=1;
-```
+    ```mysql
+    UPDATE t_review SET score=1 WHERE id=1;
+    ```
 
 3. Azureポータルからリカバリを実施
    1. 「復元」から実行
@@ -493,9 +492,9 @@ Azure で扱う以下のような秘匿情報を管理するサービス
 
 1. キーコンテナを作成
 
-```bash
-<Projest>-<Env>-kv
-```
+    ```bash
+    <Projest>-<Env>-kv
+    ```
 
 2. DB接続情報を確認してキーコンテナに登録
 
@@ -562,11 +561,12 @@ az keyvault secret show --vault-name <KEYVAULT_NAME> --name <SECRET_NAME>
 引数
   --vault-name <KEYVAULT_NAME>  キーコンテナ（Key Vault）名を指定
   -- name <SECRET_NAME> シークレット名を指定
-  -- output table <OPTION テーブル形式で出力>
+  -- output table \<OPTION テーブル形式で出力>
 
 ### APサーバの再設定
 
 ■ 実施概要
+
 1. キーコンテナに登録したDB接続情報を確認
 2. VMのタグを追加
    1. 目的は、環境変数取得シェルから（load-params）でタグから情報を取得しているため  
@@ -633,14 +633,14 @@ Azure が提供する負荷分散
 
 1. Application Gateway の作成  
 
-  ■ 設定項目  
+      ■ 設定項目  
 
-- 配置用サブネット  : WEB用サブネット  
-- フロントエンド    : パブリックIPを新規取得  
-- バックエンド      : 作成済みVM  
-- ルーティング規則  : HTTP(TCP80) を受けて TCP3000 へ転送
+    - 配置用サブネット  : WEB用サブネット  
+    - フロントエンド    : パブリックIPを新規取得  
+    - バックエンド      : 作成済みVM  
+    - ルーティング規則  : HTTP(TCP80) を受けて TCP3000 へ転送
 
-![設定イメージ](img/040.png)
+    ![設定イメージ](img/040.png)
 
 2. リソースの作成
 
@@ -741,9 +741,9 @@ SSL/TLSといったプロトコルを使って暗号化
    - openssl
 2. 証明書の発行
 
-```bash
-certbot certonly
-```
+    ```bash
+    certbot certonly
+    ```
 
 3. 証明書形式の変換（pem → pfx）→キーコンテナ（Key Vault）へ登録するため
 
@@ -853,7 +853,6 @@ openssl pkcs12 -export -inkey <PRIVATE> -in <CERT> -out <OUTPUT>
 
 1. 発行
 
-
 コマンド
 
 ```bash
@@ -881,7 +880,6 @@ Before continuing, verify the record is deployed.
 ```bash
 nslookup -type=TXT _acme-challenge.ryosukelly.com.ryosukelly.com 8.8.8.8
 ```
-
 
 ```bash
 sudo su
@@ -997,7 +995,7 @@ Azure の CDN サービス
 
 対象
 
-- ユーザごとに変化しない CSS,JS, 
+- ユーザごとに変化しない CSS,JS,
 
 ■ 用語
 
@@ -1041,10 +1039,10 @@ Azure の CDN サービス
 
 1. FrontDoorのサービスプリンシパル（≒ユーザ）を作成
 
-```bash
-az ad sp create --id <Microsoft.AzureFrontDoor-Cdn>
-az ad sp create --id 205478c0-bd83-4e1b-a9d6-db63a3e1e1c8
-```
+    ```bash
+    az ad sp create --id <Microsoft.AzureFrontDoor-Cdn>
+    az ad sp create --id 205478c0-bd83-4e1b-a9d6-db63a3e1e1c8
+    ```
 
 2. 作成したサービスプリンシパル（≒ユーザ）に対してアクセス許可
 
@@ -1053,10 +1051,10 @@ az ad sp create --id 205478c0-bd83-4e1b-a9d6-db63a3e1e1c8
 1. FrontDoorのサービスプリンシパル作成
 2. キーコンテナに対するアクセスポリシーを設定
 
-|項目|設定概要|
-|---|---|
-|プリンシパル|Microsoft.AzureFrontDoor-Cdn|
-|アクセス許可|・シークレット：取得 </br> ・証明書：取得|
+    |項目|設定概要|
+    |---|---|
+    |プリンシパル|Microsoft.AzureFrontDoor-Cdn|
+    |アクセス許可|・シークレット：取得 </br> ・証明書：取得|
 
 3. FrontDoor の [設定]-[シークレット]から証明書取得するよう設定
 
@@ -1399,23 +1397,23 @@ az extension list-available --output table
 
 2. 利用する サブスクリプション を指定
 
-  ```bash
-  az account set --subscription <サブスクリプションID>
-  ```
+      ```bash
+      az account set --subscription <サブスクリプションID>
+      ```
 
 3. 接続
    - 2 つの方法がある
    1. SSH接続 (ssh のみ)
 
-    ```bash
-    az network bastion ssh
-    ```
+      ```bash
+      az network bastion ssh
+      ```
 
    2. トンネル (別ターミナルで実行 : ssh と scp が使える)
 
-    ```bash
-    az network bastion tunnel
-    ```
+      ```bash
+      az network bastion tunnel
+      ```
 
 #### ■ az network bastion ssh
 
@@ -1477,7 +1475,6 @@ scp -i .\vm-business_key.pem -P 822 .\sample.txt azureuser@127.0.0.1:/home/azure
 ssh -i .\vm-business_key.pem -p 822 azureuser@127.0.0.1
 ```
 
-
 #### ■ Azure Active Directory とは
 
 Azure サービスに対するユーザおよび操作権の制御
@@ -1518,22 +1515,22 @@ Azureを操作するする方法
 
 1. Microsoftのリポジトリキーをインポート
 
-``` bash
-sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
-```
+    ``` bash
+    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    ```
 
 2. ローカルリポジトリ情報を作成
 
-```bash
-echo -e "[azure-cli]
-name=Azure CLI
-baseurl=https://packages.microsoft.com/yumrepos/azure-cli
-enabled=1
-gpgcheck=1
-gpgkey=https://packages.microsoft.com/keys/microsoft.asc" \
-| sudo tee /etc/yum.repos.d/azure-cli.repo
+    ```bash
+    echo -e "[azure-cli]
+    name=Azure CLI
+    baseurl=https://packages.microsoft.com/yumrepos/azure-cli
+    enabled=1
+    gpgcheck=1
+    gpgkey=https://packages.microsoft.com/keys/microsoft.asc" \
+    | sudo tee /etc/yum.repos.d/azure-cli.repo
 
-```
+    ```
 
 3. インストール
 
